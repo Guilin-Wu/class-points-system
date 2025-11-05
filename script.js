@@ -72,9 +72,19 @@ document.addEventListener('DOMContentLoaded', () => {
             btnExportChoiceJson: document.getElementById('btn-export-choice-json'),
             btnExportChoiceExcel: document.getElementById('btn-export-choice-excel'),
 
+            quickReasonModal: document.getElementById('quick-reason-modal'),
+            quickReasonForm: document.getElementById('quick-reason-form'),
+            quickReasonIdInput: document.getElementById('quick-reason-id'),
+            quickReasonTextInput: document.getElementById('quick-reason-text'),
+            quickReasonPointsInput: document.getElementById('quick-reason-points'),
+            quickReasonTableBody: document.getElementById('quick-reason-table-body'),
+            btnCancelQuickReasonEdit: document.getElementById('btn-cancel-quick-reason-edit'),
+
 
             groupLeaderboardList: document.getElementById('group-leaderboard-list'),
             groupLeaderboardToggle: document.getElementById('group-leaderboard-toggle'),
+
+            btnOpenQuickReasonModal: document.getElementById('btn-open-quick-reason-modal'),
         },
 
 
@@ -409,12 +419,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 App.saveData();
                 return { success: true };
             },
+            addQuickReason(text, points) {
+                if (!text || !points) return { success: false, message: '文本和分值不能为空' };
+                const newReason = {
+                    id: App.actions.generateId(), // 复用已有的ID生成器
+                    text: text,
+                    points: parseInt(points)
+                };
+                App.state.quickReasons.push(newReason);
+                App.saveData();
+                return { success: true };
+            },
+
+            updateQuickReason(id, text, points) {
+                if (!text || !points) return { success: false, message: '文本和分值不能为空' };
+                const reason = App.state.quickReasons.find(r => r.id === id);
+                if (reason) {
+                    reason.text = text;
+                    reason.points = parseInt(points);
+                    App.saveData();
+                    return { success: true };
+                }
+                return { success: false, message: '未找到该理由' };
+            },
+
+            deleteQuickReason(id) {
+                App.state.quickReasons = App.state.quickReasons.filter(r => r.id !== id);
+                App.saveData();
+                return { success: true };
+            },
         },
 
         // ... (render, saveData, loadData, import/export 函数保持不变)
         render() { App.render.stats(); App.render.dashboard(); App.render.leaderboard(); App.render.studentTable(); App.render.sortIndicators(); App.render.groupTable(); App.render.groupLeaderboard(); App.render.rewards(); App.render.records(); App.render.turntablePrizes(); App.render.dashboardSortIndicators(); },
         saveData() { localStorage.setItem('classPointsData', JSON.stringify(App.state)); },
-        loadData() { const d = localStorage.getItem('classPointsData'); const s = { students: [], groups: [], rewards: [], records: [], sortState: { column: 'id', direction: 'asc' }, leaderboardType: 'realtime', turntablePrizes: [], turntableCost: 10 }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; if (st.totalDeductions === undefined) st.totalDeductions = 0; /* <--- 新增此行 */ }); } App.state = { ...s, ...l }; } else { let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100, totalDeductions: 0 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80, totalDeductions: 0 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }]; App.saveData(); } },
+        loadData() {
+            const d = localStorage.getItem('classPointsData'); const s = {
+                students: [], groups: [], rewards: [], records: [], sortState: { column: 'id', direction: 'asc' }, leaderboardType: 'realtime', turntablePrizes: [], turntableCost: 10, quickReasons: [
+                    { id: 'qr_1', text: '积极回答', points: 5 },
+                    { id: 'qr_2', text: '优秀作业', points: 10 },
+                    { id: 'qr_3', text: '帮助同学', points: 3 },
+                    { id: 'qr_4', text: '上课迟到', points: -1 },
+                    { id: 'qr_5', text: '未交作业', points: -5 }]
+            }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; if (st.totalDeductions === undefined) st.totalDeductions = 0; /* <--- 新增此行 */ }); } App.state = { ...s, ...l }; } else { App.state = s; let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100, totalDeductions: 0 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80, totalDeductions: 0 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }]; App.saveData(); }
+        },
         //loadData() { const d = localStorage.getItem('classPointsData'); const s = { students: [], groups: [], rewards: [], records: [], sortState: { column: 'id', direction: 'asc' }, leaderboardType: 'realtime', turntablePrizes: [], turntableCost: 10 }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; }); } App.state = { ...s, ...l }; } else { let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }]; App.saveData(); } },
         //exportData: () => { const d = JSON.stringify(App.state, null, 2); const b = new Blob([d], { type: 'application/json' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `class_data_${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(u) },
 
@@ -587,6 +635,14 @@ document.addEventListener('DOMContentLoaded', () => {
             App.DOMElements.groupPointsForm.addEventListener('submit', e => App.handlers.handleGroupPointsFormSubmit(e));
             App.DOMElements.pointsForm.addEventListener('submit', e => App.handlers.handlePointsFormSubmit(e));
             App.DOMElements.allPointsForm.addEventListener('submit', e => App.handlers.handleAllPointsFormSubmit(e));
+
+            App.DOMElements.pointsModal.addEventListener('click', e => App.handlers.handlePointsModalClick(e));
+
+            App.DOMElements.quickReasonForm.addEventListener('submit', e => App.handlers.handleQuickReasonFormSubmit(e));
+            App.DOMElements.quickReasonTableBody.addEventListener('click', e => App.handlers.handleQuickReasonTableClick(e));
+            App.DOMElements.btnCancelQuickReasonEdit.addEventListener('click', () => App.handlers.resetQuickReasonForm());
+            // --- 新增结束 ---
+
             App.DOMElements.turntablePrizeForm.addEventListener('submit', e => App.handlers.handleTurntablePrizeFormSubmit(e));
             App.DOMElements.spinSelectForm.addEventListener('submit', e => App.handlers.handleSpinSelectFormSubmit(e));
             App.DOMElements.bulkGroupForm.addEventListener('submit', e => App.handlers.handleBulkGroupFormSubmit(e));
@@ -602,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-add-turntable-prize').addEventListener('click', () => App.handlers.openTurntablePrizeModal());
             document.getElementById('btn-spin').addEventListener('click', () => App.handlers.openSpinSelectModal());
             document.getElementById('btn-add-student-points').addEventListener('click', () => App.handlers.openStudentPointsModal());
+            document.getElementById('btn-open-quick-reason-modal').addEventListener('click', () => App.handlers.openQuickReasonModal());
             document.getElementById('btn-paste-import-students').addEventListener('click', () => App.handlers.openPasteImportModal());
 
             // 数据操作按钮（清空、导入、导出）
@@ -926,7 +983,86 @@ document.addEventListener('DOMContentLoaded', () => {
             openRewardModal: (id = null) => { App.DOMElements.rewardForm.reset(); App.DOMElements.rewardIdInput.value = id || ''; if (id) { const r = App.state.rewards.find(r => r.id === id); App.DOMElements.rewardModalTitle.innerText = '编辑奖品'; App.DOMElements.rewardNameInput.value = r.name; App.DOMElements.rewardCostInput.value = r.cost } else App.DOMElements.rewardModalTitle.innerText = '上架新奖品'; App.ui.openModal(App.DOMElements.rewardModal); },
             openRedeemModal: (rId) => { const r = App.state.rewards.find(r => r.id === rId); if (!r) return; App.DOMElements.redeemRewardIdInput.value = rId; App.DOMElements.redeemRewardName.innerText = r.name; App.DOMElements.redeemRewardCost.innerText = r.cost; const s = App.DOMElements.redeemStudentSelect; s.innerHTML = '<option value="">-- 选择学生 --</option>'; App.state.students.filter(st => st.points >= r.cost).forEach(st => { const o = document.createElement('option'); o.value = st.id; o.innerText = `${st.name} (当前 ${st.points} 积分)`; s.add(o) }); App.ui.openModal(App.DOMElements.redeemModal); },
             openGroupPointsModal() { App.DOMElements.groupPointsForm.reset(); const s = App.DOMElements.groupPointsSelect; s.innerHTML = '<option value="">-- 请选择一个小组 --</option>'; App.state.groups.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.innerText = g.name; s.add(o) }); App.ui.openModal(App.DOMElements.groupPointsModal); },
-            openPointsModal(sId) { const s = App.state.students.find(s => s.id === sId); if (!s) return; App.DOMElements.pointsForm.reset(); App.DOMElements.pointsStudentName.innerText = s.name; App.DOMElements.pointsStudentIdInput.value = sId; App.ui.openModal(App.DOMElements.pointsModal); App.DOMElements.pointsChangeAmount.focus() },
+            
+            openPointsModal(sId) {
+                const s = App.state.students.find(s => s.id === sId);
+                if (!s) return;
+                App.DOMElements.pointsForm.reset();
+                App.DOMElements.pointsStudentName.innerText = s.name;
+                App.DOMElements.pointsStudentIdInput.value = sId;
+
+                // --- ⬇️ 这是新增的“连线”代码 ⬇️ ---
+
+                // 1. 找到我们在 HTML 中创建的按钮容器
+                const container = App.DOMElements.pointsModal.querySelector('#quick-reason-buttons-container');
+                if (container) {
+                    // 2. 清空旧按钮（防止多次打开时重复添加）
+                    container.innerHTML = '';
+
+                    // 3. 遍历 App.state 中的快捷理由
+                    App.state.quickReasons.forEach(reason => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button'; // 关键：防止它提交表单
+                        
+                        // 4. 设置 className 来匹配你的点击处理器
+                        btn.className = 'btn btn-sm quick-reason-btn';
+                        
+                        // 5. 将理由和分数存入 dataset (你的点击处理器已准备好读取它们)
+                        btn.dataset.points = reason.points;
+                        btn.dataset.reason = reason.text;
+                        
+                        const pointsText = reason.points > 0 ? `+${reason.points}` : reason.points;
+                        btn.textContent = `${reason.text} (${pointsText})`;
+                        
+                        container.appendChild(btn);
+                    });
+                }
+                
+                // --- ⬆️ 新增代码结束 ⬆️ ---
+
+                App.ui.openModal(App.DOMElements.pointsModal);
+                App.DOMElements.pointsChangeAmount.focus();
+            },
+
+            //openPointsModal(sId) { const s = App.state.students.find(s => s.id === sId); if (!s) return; App.DOMElements.pointsForm.reset(); App.DOMElements.pointsStudentName.innerText = s.name; App.DOMElements.pointsStudentIdInput.value = sId; App.ui.openModal(App.DOMElements.pointsModal); App.DOMElements.pointsChangeAmount.focus() },
+
+            handlePointsModalClick: (e) => {
+                // 检查点击的是否是快捷按钮
+                if (!e.target.matches('.quick-reason-btn')) return;
+
+                const btn = e.target;
+                const points = parseInt(btn.dataset.points);
+                const reason = btn.dataset.reason;
+
+                // 关键：从隐藏字段获取当前正在操作的学生ID
+                const studentId = App.DOMElements.pointsStudentIdInput.value;
+
+                if (!studentId) {
+                    App.ui.showNotification('未找到学生ID，操作失败', 'error');
+                    return;
+                }
+
+                // --- 升级！不再填充表单，而是直接执行操作 ---
+
+                // 1. 调用核心 action
+                const result = App.actions.changePoints(studentId, points, reason);
+
+                if (result.success) {
+                    // 2. 关闭当前弹窗
+                    App.ui.closeModal(App.DOMElements.pointsModal);
+
+                    // 3. 弹出成功提示
+                    const student = App.state.students.find(s => s.id === studentId);
+                    const action = points > 0 ? '加分' : '扣分';
+                    App.ui.showNotification(`已为 ${student.name} ${action} ${Math.abs(points)} 分！`);
+
+                    // 4. 刷新界面
+                    App.render();
+                } else {
+                    App.ui.showNotification(result.message, 'error');
+                }
+            },
+
             openAllPointsModal() { App.DOMElements.allPointsForm.reset(); App.ui.openModal(App.DOMElements.allPointsModal); },
             openTurntablePrizeModal(id = null) { App.DOMElements.turntablePrizeForm.reset(); App.DOMElements.turntablePrizeIdInput.value = id || ''; if (id) { const p = App.state.turntablePrizes.find(p => p.id === id); App.DOMElements.turntablePrizeNameInput.value = p.text; App.DOMElements.turntablePrizeModalTitle.innerText = '编辑奖品'; } else { App.DOMElements.turntablePrizeModalTitle.innerText = '新增奖品'; } App.ui.openModal(App.DOMElements.turntablePrizeModal); },
             openSpinSelectModal() { if (App.turntableInstance && App.turntableInstance.isSpinning) return; if (App.state.turntablePrizes.length === 0) { App.ui.showNotification('请先在右侧添加奖品！', 'error'); return; } App.DOMElements.spinCostDisplay.innerText = App.state.turntableCost; const s = App.DOMElements.spinStudentSelect; s.innerHTML = '<option value="">-- 选择学生 --</option>'; App.state.students.filter(st => st.points >= App.state.turntableCost).forEach(st => { const o = document.createElement('option'); o.value = st.id; o.innerText = `${st.name} (当前 ${st.points} 积分)`; s.add(o) }); App.ui.openModal(App.DOMElements.spinSelectModal); },
@@ -1031,6 +1167,67 @@ document.addEventListener('DOMContentLoaded', () => {
                         App.ui.showNotification(result.message, 'error');
                     }
                 });
+            },
+
+            openQuickReasonModal() {
+                App.handlers.resetQuickReasonForm(); // 重置表单
+                App.render.quickReasonTable(); // 渲染表格
+                App.ui.openModal(App.DOMElements.quickReasonModal);
+            },
+
+            resetQuickReasonForm() {
+                App.DOMElements.quickReasonForm.reset();
+                App.DOMElements.quickReasonIdInput.value = '';
+                App.DOMElements.btnCancelQuickReasonEdit.style.display = 'none';
+            },
+
+            handleQuickReasonFormSubmit(e) {
+                e.preventDefault();
+                const id = App.DOMElements.quickReasonIdInput.value;
+                const text = App.DOMElements.quickReasonTextInput.value;
+                const points = App.DOMElements.quickReasonPointsInput.value;
+
+                let result;
+                if (id) {
+                    result = App.actions.updateQuickReason(id, text, points);
+                } else {
+                    result = App.actions.addQuickReason(text, points);
+                }
+
+                if (result.success) {
+                    App.ui.showNotification(id ? '理由已更新' : '理由已添加');
+                    App.handlers.resetQuickReasonForm();
+                    App.render.quickReasonTable();
+                } else {
+                    App.ui.showNotification(result.message, 'error');
+                }
+            },
+
+            handleQuickReasonTableClick(e) {
+                const btn = e.target;
+                const tr = btn.closest('tr');
+                if (!tr) return;
+                const id = tr.dataset.id;
+                const reason = App.state.quickReasons.find(r => r.id === id);
+
+                if (btn.matches('.btn-edit-reason')) {
+                    // 填充表单以供编辑
+                    App.DOMElements.quickReasonIdInput.value = reason.id;
+                    App.DOMElements.quickReasonTextInput.value = reason.text;
+                    App.DOMElements.quickReasonPointsInput.value = reason.points;
+                    App.DOMElements.btnCancelQuickReasonEdit.style.display = 'inline-block';
+                }
+
+                if (btn.matches('.btn-delete-reason')) {
+                    // 删除理由
+                    App.ui.showConfirm(`确定要删除快捷理由“${reason.text}”吗？`, () => {
+                        const result = App.actions.deleteQuickReason(id);
+                        if (result.success) {
+                            App.ui.showNotification('理由已删除');
+                            App.render.quickReasonTable();
+                        }
+                    });
+                }
             },
 
 
@@ -1565,6 +1762,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.classList.add('active');
                     if (indicator) indicator.textContent = direction === 'asc' ? ' ▲' : ' ▼';
                 }
+            });
+        },
+
+        "render.quickReasonTable": () => {
+            const tbody = App.DOMElements.quickReasonTableBody;
+            tbody.innerHTML = ''; // 清空旧表格
+            if (!App.state.quickReasons || App.state.quickReasons.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">暂无快捷理由</td></tr>';
+                return;
+            }
+
+            App.state.quickReasons.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.dataset.id = r.id;
+                tr.innerHTML = `
+            <td>${r.text}</td>
+            <td>${r.points > 0 ? '+' : ''}${r.points}</td>
+            <td class="actions">
+                <button class="btn btn-primary btn-sm btn-edit-reason">编辑</button>
+                <button class="btn btn-danger btn-sm btn-delete-reason">删除</button>
+            </td>
+        `;
+                tbody.appendChild(tr);
             });
         },
     };

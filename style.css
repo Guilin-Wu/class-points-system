@@ -991,3 +991,41 @@ form input:focus, form select:focus {
   overflow-y: auto; /* 核心：当内容超出最大高度时，自动显示垂直滚动条 */
   margin-top: 15px; /* 与标题保持一些间距 */
 }
+
+
+/* --- 积分模态框 - 管理按钮样式 --- */
+.quick-reason-label {
+  /* 使用 flex 布局让“快捷理由”和“管理”按钮在同一行 */
+  display: flex;
+  justify-content: space-between; /* 两端对齐 */
+  align-items: center; /* 垂直居中 */
+  margin-top: 10px;
+}
+
+/* --- 快捷理由管理模态框样式 --- */
+#quick-reason-form .form-row {
+  display: flex;
+  gap: 15px;
+}
+#quick-reason-form .form-group {
+  flex: 1; /* 让两个输入框平分宽度 */
+}
+#quick-reason-form .form-group input {
+  margin-bottom: 0; /* 移除单个 input 的下边距 */
+}
+
+#quick-reason-modal hr {
+  margin: 25px 0;
+  border: 0;
+  border-top: 1px solid var(--border-color);
+}
+
+/* --- 快捷理由按钮容器样式 --- */
+#quick-reason-buttons-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}

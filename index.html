@@ -154,6 +154,7 @@
         <div class="header-actions">
           <button class="btn btn-purple" id="btn-paste-import-students">📋 手动导入学生</button>
           <button class="btn btn-primary" id="btn-add-student">＋ 新增学生</button>
+          <button class="btn btn-info" id="btn-open-quick-reason-modal">⚙️ 管理快捷理由</button>
         </div>
       </div>
       <table class="styled-table" id="student-table">
@@ -282,6 +283,11 @@
           <button type="submit" class="btn btn-primary">确认调整</button>
         </div>
       </form>
+
+      <label class="quick-reason-label" style="margin-top: 15px;">快捷理由:</label>
+
+      <div id="quick-reason-buttons-container">
+      </div>
     </div>
   </div>
 
@@ -560,6 +566,48 @@
   </div>
 
   <div id="notification-container"></div>
+
+  <div id="quick-reason-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>管理快捷理由</h2>
+        <span class="close-btn">&times;</span>
+      </div>
+
+      <form id="quick-reason-form">
+        <input type="hidden" id="quick-reason-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="quick-reason-text">理由文本:</label>
+            <input type="text" id="quick-reason-text" required placeholder="例如：积极回答">
+          </div>
+          <div class="form-group">
+            <label for="quick-reason-points">对应分值:</label>
+            <input type="number" id="quick-reason-points" required placeholder="例如: 5 或 -5">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">保存理由</button>
+          <button type="button" class="btn" id="btn-cancel-quick-reason-edit" style="display: none;">取消编辑</button>
+        </div>
+      </form>
+
+      <hr>
+
+      <table class="styled-table" id="quick-reason-table">
+        <thead>
+          <tr>
+            <th>理由文本</th>
+            <th>分值</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="quick-reason-table-body">
+        </tbody>
+      </table>
+
+    </div>
+  </div>
 
 </body>
 
