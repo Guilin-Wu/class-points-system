@@ -1021,7 +1021,10 @@ form input:focus, form select:focus {
 }
 
 /* --- 快捷理由按钮容器样式 --- */
-#quick-reason-buttons-container {
+#quick-reason-buttons-container,
+#group-quick-reason-container,
+#student-quick-reason-container,
+#all-quick-reason-container {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

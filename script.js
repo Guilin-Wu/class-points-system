@@ -637,7 +637,10 @@ document.addEventListener('DOMContentLoaded', () => {
             App.DOMElements.allPointsForm.addEventListener('submit', e => App.handlers.handleAllPointsFormSubmit(e));
 
             App.DOMElements.pointsModal.addEventListener('click', e => App.handlers.handlePointsModalClick(e));
-
+            App.DOMElements.groupPointsModal.addEventListener('click', e => App.handlers.handleBatchQuickReasonClick(e));
+            App.DOMElements.studentPointsModal.addEventListener('click', e => App.handlers.handleBatchQuickReasonClick(e));
+            App.DOMElements.allPointsModal.addEventListener('click', e => App.handlers.handleBatchQuickReasonClick(e));
+         
             App.DOMElements.quickReasonForm.addEventListener('submit', e => App.handlers.handleQuickReasonFormSubmit(e));
             App.DOMElements.quickReasonTableBody.addEventListener('click', e => App.handlers.handleQuickReasonTableClick(e));
             App.DOMElements.btnCancelQuickReasonEdit.addEventListener('click', () => App.handlers.resetQuickReasonForm());
@@ -982,8 +985,38 @@ document.addEventListener('DOMContentLoaded', () => {
             openGroupModal: (id = null) => { App.DOMElements.groupForm.reset(); App.DOMElements.groupIdInput.value = id || ''; if (id) { const g = App.state.groups.find(gr => gr.id === id); App.DOMElements.groupNameInput.value = g.name; App.DOMElements.groupModal.querySelector('h2').innerText = '编辑小组' } else App.DOMElements.groupModal.querySelector('h2').innerText = '新增小组'; App.ui.openModal(App.DOMElements.groupModal); },
             openRewardModal: (id = null) => { App.DOMElements.rewardForm.reset(); App.DOMElements.rewardIdInput.value = id || ''; if (id) { const r = App.state.rewards.find(r => r.id === id); App.DOMElements.rewardModalTitle.innerText = '编辑奖品'; App.DOMElements.rewardNameInput.value = r.name; App.DOMElements.rewardCostInput.value = r.cost } else App.DOMElements.rewardModalTitle.innerText = '上架新奖品'; App.ui.openModal(App.DOMElements.rewardModal); },
             openRedeemModal: (rId) => { const r = App.state.rewards.find(r => r.id === rId); if (!r) return; App.DOMElements.redeemRewardIdInput.value = rId; App.DOMElements.redeemRewardName.innerText = r.name; App.DOMElements.redeemRewardCost.innerText = r.cost; const s = App.DOMElements.redeemStudentSelect; s.innerHTML = '<option value="">-- 选择学生 --</option>'; App.state.students.filter(st => st.points >= r.cost).forEach(st => { const o = document.createElement('option'); o.value = st.id; o.innerText = `${st.name} (当前 ${st.points} 积分)`; s.add(o) }); App.ui.openModal(App.DOMElements.redeemModal); },
-            openGroupPointsModal() { App.DOMElements.groupPointsForm.reset(); const s = App.DOMElements.groupPointsSelect; s.innerHTML = '<option value="">-- 请选择一个小组 --</option>'; App.state.groups.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.innerText = g.name; s.add(o) }); App.ui.openModal(App.DOMElements.groupPointsModal); },
-            
+
+            openGroupPointsModal() {
+                App.DOMElements.groupPointsForm.reset();
+                const s = App.DOMElements.groupPointsSelect;
+                s.innerHTML = '<option value="">-- 请选择一个小组 --</option>';
+                App.state.groups.forEach(g => {
+                    const o = document.createElement('option');
+                    o.value = g.id;
+                    o.innerText = g.name;
+                    s.add(o);
+                });
+
+                // --- ⬇️ 新增渲染逻辑 ⬇️ ---
+                const container = App.DOMElements.groupPointsModal.querySelector('#group-quick-reason-container');
+                container.innerHTML = '';
+                App.state.quickReasons.forEach(reason => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    // 注意：使用一个新类名，区别于之前的 .quick-reason-btn
+                    btn.className = 'btn btn-sm batch-quick-reason-btn';
+                    btn.dataset.points = reason.points;
+                    btn.dataset.reason = reason.text;
+                    btn.textContent = `${reason.text} (${reason.points > 0 ? '+' : ''}${reason.points})`;
+                    container.appendChild(btn);
+                });
+                // --- ⬆️ 新增结束 ⬆️ ---
+
+                App.ui.openModal(App.DOMElements.groupPointsModal);
+            },
+
+            //openGroupPointsModal() { App.DOMElements.groupPointsForm.reset(); const s = App.DOMElements.groupPointsSelect; s.innerHTML = '<option value="">-- 请选择一个小组 --</option>'; App.state.groups.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.innerText = g.name; s.add(o) }); App.ui.openModal(App.DOMElements.groupPointsModal); },
+
             openPointsModal(sId) {
                 const s = App.state.students.find(s => s.id === sId);
                 if (!s) return;
@@ -1003,21 +1036,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     App.state.quickReasons.forEach(reason => {
                         const btn = document.createElement('button');
                         btn.type = 'button'; // 关键：防止它提交表单
-                        
+
                         // 4. 设置 className 来匹配你的点击处理器
                         btn.className = 'btn btn-sm quick-reason-btn';
-                        
+
                         // 5. 将理由和分数存入 dataset (你的点击处理器已准备好读取它们)
                         btn.dataset.points = reason.points;
                         btn.dataset.reason = reason.text;
-                        
+
                         const pointsText = reason.points > 0 ? `+${reason.points}` : reason.points;
                         btn.textContent = `${reason.text} (${pointsText})`;
-                        
+
                         container.appendChild(btn);
                     });
                 }
-                
+
                 // --- ⬆️ 新增代码结束 ⬆️ ---
 
                 App.ui.openModal(App.DOMElements.pointsModal);
@@ -1063,7 +1096,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
 
-            openAllPointsModal() { App.DOMElements.allPointsForm.reset(); App.ui.openModal(App.DOMElements.allPointsModal); },
+            handleBatchQuickReasonClick: (e) => {
+                // 只响应我们新创建的按钮
+                if (!e.target.matches('.batch-quick-reason-btn')) return;
+
+                const btn = e.target;
+                const points = btn.dataset.points;
+                const reason = btn.dataset.reason;
+
+                // 找到这个按钮所在的模态框
+                const modal = btn.closest('.modal');
+                if (!modal) return;
+
+                // 找到该模态框内的表单
+                const form = modal.querySelector('form');
+                if (!form) return;
+
+                // 找到表单中的第一个数字输入框和第一个文本输入框
+                const amountInput = form.querySelector('input[type="number"]');
+                const reasonInput = form.querySelector('input[type="text"]');
+
+                // 填充它们！
+                if (amountInput) amountInput.value = points;
+                if (reasonInput) reasonInput.value = reason;
+            },
+
+            openAllPointsModal() {
+                App.DOMElements.allPointsForm.reset();
+
+                // --- ⬇️ 新增渲染逻辑 ⬇️ ---
+                const container = App.DOMElements.allPointsModal.querySelector('#all-quick-reason-container');
+                container.innerHTML = '';
+                App.state.quickReasons.forEach(reason => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm batch-quick-reason-btn'; // 使用新类名
+                    btn.dataset.points = reason.points;
+                    btn.dataset.reason = reason.text;
+                    btn.textContent = `${reason.text} (${reason.points > 0 ? '+' : ''}${reason.points})`;
+                    container.appendChild(btn);
+                });
+                // --- ⬆️ 新增结束 ⬆️ ---
+
+                App.ui.openModal(App.DOMElements.allPointsModal);
+            },
+            
+            //openAllPointsModal() { App.DOMElements.allPointsForm.reset(); App.ui.openModal(App.DOMElements.allPointsModal); },
             openTurntablePrizeModal(id = null) { App.DOMElements.turntablePrizeForm.reset(); App.DOMElements.turntablePrizeIdInput.value = id || ''; if (id) { const p = App.state.turntablePrizes.find(p => p.id === id); App.DOMElements.turntablePrizeNameInput.value = p.text; App.DOMElements.turntablePrizeModalTitle.innerText = '编辑奖品'; } else { App.DOMElements.turntablePrizeModalTitle.innerText = '新增奖品'; } App.ui.openModal(App.DOMElements.turntablePrizeModal); },
             openSpinSelectModal() { if (App.turntableInstance && App.turntableInstance.isSpinning) return; if (App.state.turntablePrizes.length === 0) { App.ui.showNotification('请先在右侧添加奖品！', 'error'); return; } App.DOMElements.spinCostDisplay.innerText = App.state.turntableCost; const s = App.DOMElements.spinStudentSelect; s.innerHTML = '<option value="">-- 选择学生 --</option>'; App.state.students.filter(st => st.points >= App.state.turntableCost).forEach(st => { const o = document.createElement('option'); o.value = st.id; o.innerText = `${st.name} (当前 ${st.points} 积分)`; s.add(o) }); App.ui.openModal(App.DOMElements.spinSelectModal); },
             // ========== 在 script.js 的 App.handlers 对象中，用下面这个函数完整替换掉旧的 initTurntable 函数 ==========
@@ -1236,13 +1314,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 App.DOMElements.studentPointsCheckboxContainer.innerHTML = '';
 
                 // 2. 生成新的学生复选框
-                // 确保学生按姓名排序，并显示实时积分
+                // ... (你现有的 forEach 循环代码保持不变) ...
                 App.state.students
                     .sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-Hans-CN'))
                     .forEach(student => {
                         const checkboxDiv = document.createElement('div');
                         checkboxDiv.className = 'checkbox-item';
-                        // 使用 student.points 显示当前积分，方便用户参考
                         checkboxDiv.innerHTML = `
                 <input type="checkbox" id="student-point-${student.id}" name="student-ids" value="${student.id}">
                 <label for="student-point-${student.id}">${student.name} (${student.points}⭐)</label>
@@ -1250,7 +1327,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         App.DOMElements.studentPointsCheckboxContainer.appendChild(checkboxDiv);
                     });
 
-                // 3. 打开模态框 (studentPointsModal 已经在 DOMElements 中定义)
+                // --- ⬇️ 新增渲染逻辑 ⬇️ ---
+                const container = App.DOMElements.studentPointsModal.querySelector('#student-quick-reason-container');
+                container.innerHTML = '';
+                App.state.quickReasons.forEach(reason => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm batch-quick-reason-btn'; // 使用新类名
+                    btn.dataset.points = reason.points;
+                    btn.dataset.reason = reason.text;
+                    btn.textContent = `${reason.text} (${reason.points > 0 ? '+' : ''}${reason.points})`;
+                    container.appendChild(btn);
+                });
+                // --- ⬆️ 新增结束 ⬆️ ---
+
+                // 3. 打开模态框
                 App.ui.openModal(App.DOMElements.studentPointsModal);
             },
 
