@@ -155,6 +155,7 @@
           <button class="btn btn-purple" id="btn-paste-import-students">📋 手动导入学生</button>
           <button class="btn btn-primary" id="btn-add-student">＋ 新增学生</button>
           <button class="btn btn-info" id="btn-open-quick-reason-modal">⚙️ 管理快捷理由</button>
+          <button class="btn btn-green" id="btn-open-achievement-modal">🏆 管理成就</button>
         </div>
       </div>
       <table class="styled-table" id="student-table">
@@ -613,6 +614,48 @@
           </tr>
         </thead>
         <tbody id="quick-reason-table-body">
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+  <div id="achievement-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>管理成就称号</h2>
+        <span class="close-btn">&times;</span>
+      </div>
+
+      <form id="achievement-form">
+        <input type="hidden" id="achievement-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="achievement-name-text">称号名称:</label>
+            <input type="text" id="achievement-name-text" required placeholder="例如：积分王者">
+          </div>
+          <div class="form-group">
+            <label for="achievement-points">所需积分 (累计获得):</label>
+            <input type="number" id="achievement-points" required placeholder="例如: 500" min="1">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">保存称号</button>
+          <button type="button" class="btn" id="btn-cancel-achievement-edit" style="display: none;">取消编辑</button>
+        </div>
+      </form>
+
+      <hr>
+
+      <table class="styled-table" id="achievement-table">
+        <thead>
+          <tr>
+            <th>称号名称</th>
+            <th>所需积分</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="achievement-table-body">
         </tbody>
       </table>
 

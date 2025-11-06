@@ -85,18 +85,44 @@ document.addEventListener('DOMContentLoaded', () => {
             groupLeaderboardToggle: document.getElementById('group-leaderboard-toggle'),
 
             btnOpenQuickReasonModal: document.getElementById('btn-open-quick-reason-modal'),
+
+            btnOpenAchievementModal: document.getElementById('btn-open-achievement-modal'),
+            achievementModal: document.getElementById('achievement-modal'),
+            achievementForm: document.getElementById('achievement-form'),
+            achievementIdInput: document.getElementById('achievement-id'),
+            achievementNameInput: document.getElementById('achievement-name-text'),
+            achievementPointsInput: document.getElementById('achievement-points'),
+            achievementTableBody: document.getElementById('achievement-table-body'),
+            btnCancelAchievementEdit: document.getElementById('btn-cancel-achievement-edit'),
         },
 
 
         // --- 新增：成就系统 ---
         helpers: {
             getAchievement(totalEarnedPoints) {
-                if (totalEarnedPoints >= 1000) return { title: '积分战神', className: 'tier-god' };
-                if (totalEarnedPoints >= 500) return { title: '积分王者', className: 'tier-king' };
-                if (totalEarnedPoints >= 200) return { title: '积分大师', className: 'tier-master' };
-                if (totalEarnedPoints >= 100) return { title: '积分达人', className: 'tier-expert' };
-                if (totalEarnedPoints >= 50) return { title: '积分新秀', className: 'tier-rookie' };
-                return null; // 返回 null
+                // 1. 获取所有称号，按所需积分降序排列
+                const sortedTiers = [...App.state.achievementTiers].sort((a, b) => b.points - a.points);
+
+                // 2. 找到学生达到的最高称号
+                const achievedTier = sortedTiers.find(tier => totalEarnedPoints >= tier.points);
+
+                if (!achievedTier) return null; // 未达到任何称号
+
+                // 3. 为了分配样式，我们需要知道这是“第几级”
+                //    我们按积分升序排列，找到它的索引
+                const tiersByLevel = [...App.state.achievementTiers].sort((a, b) => a.points - b.points);
+
+                // 4. 找到这个称号在“等级”中的位置（从0开始的索引）
+                const levelIndex = tiersByLevel.findIndex(t => t.id === achievedTier.id);
+
+                // 5. 返回称号名称和它的等级（1-indexed）
+                //    我们最多只支持5个等级的样式
+                const level = levelIndex + 1;
+
+                return {
+                    title: achievedTier.name,
+                    level: level // 例如：1, 2, 3, 4, 5, 6, 7...
+                };
             }
         },
 
@@ -448,6 +474,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 App.saveData();
                 return { success: true };
             },
+
+            // --- ⬇️ 新增 Actions ⬇️ ---
+            addAchievementTier(name, points) {
+                if (!name || !points) return { success: false, message: '名称和所需积分不能为空' };
+                const newTier = {
+                    id: App.actions.generateId(),
+                    name: name,
+                    points: parseInt(points)
+                };
+                App.state.achievementTiers.push(newTier);
+                App.saveData();
+                return { success: true };
+            },
+
+            updateAchievementTier(id, name, points) {
+                if (!name || !points) return { success: false, message: '名称和所需积分不能为空' };
+                const tier = App.state.achievementTiers.find(t => t.id === id);
+                if (tier) {
+                    tier.name = name;
+                    tier.points = parseInt(points);
+                    App.saveData();
+                    return { success: true };
+                }
+                return { success: false, message: '未找到该称号' };
+            },
+
+            deleteAchievementTier(id) {
+                App.state.achievementTiers = App.state.achievementTiers.filter(t => t.id !== id);
+                App.saveData();
+                return { success: true };
+            },
+            // --- ⬆️ 新增结束 ⬆️ ---
         },
 
         // ... (render, saveData, loadData, import/export 函数保持不变)
@@ -460,8 +518,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     { id: 'qr_2', text: '优秀作业', points: 10 },
                     { id: 'qr_3', text: '帮助同学', points: 3 },
                     { id: 'qr_4', text: '上课迟到', points: -1 },
-                    { id: 'qr_5', text: '未交作业', points: -5 }]
-            }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; if (st.totalDeductions === undefined) st.totalDeductions = 0; /* <--- 新增此行 */ }); } App.state = { ...s, ...l }; } else { App.state = s; let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100, totalDeductions: 0 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80, totalDeductions: 0 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }]; App.saveData(); }
+                    { id: 'qr_5', text: '未交作业', points: -5 }],
+                // --- ⬇️ 新增 ⬇️ ---
+                achievementTiers: [],
+                // --- ⬆️ 新增 ⬆️ ---
+            }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; if (st.totalDeductions === undefined) st.totalDeductions = 0; /* <--- 新增此行 */ }); } App.state = { ...s, ...l }; } else {
+                App.state = s; let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100, totalDeductions: 0 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80, totalDeductions: 0 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }];
+                // --- ⬇️ 新增：设置默认称号 ⬇️ ---
+                App.state.achievementTiers = [
+                    { id: App.actions.generateId(), name: '积分新秀', points: 50 },
+                    { id: App.actions.generateId(), name: '积分达人', points: 100 },
+                    { id: App.actions.generateId(), name: '积分大师', points: 200 },
+                    { id: App.actions.generateId(), name: '积分王者', points: 500 },
+                    { id: App.actions.generateId(), name: '积分战神', points: 1000 }
+                ];
+                // --- ⬆️ 新增 ⬆️ ---
+                App.saveData();
+            }
         },
         //loadData() { const d = localStorage.getItem('classPointsData'); const s = { students: [], groups: [], rewards: [], records: [], sortState: { column: 'id', direction: 'asc' }, leaderboardType: 'realtime', turntablePrizes: [], turntableCost: 10 }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; }); } App.state = { ...s, ...l }; } else { let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }]; App.saveData(); } },
         //exportData: () => { const d = JSON.stringify(App.state, null, 2); const b = new Blob([d], { type: 'application/json' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `class_data_${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(u) },
@@ -640,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
             App.DOMElements.groupPointsModal.addEventListener('click', e => App.handlers.handleBatchQuickReasonClick(e));
             App.DOMElements.studentPointsModal.addEventListener('click', e => App.handlers.handleBatchQuickReasonClick(e));
             App.DOMElements.allPointsModal.addEventListener('click', e => App.handlers.handleBatchQuickReasonClick(e));
-         
+
             App.DOMElements.quickReasonForm.addEventListener('submit', e => App.handlers.handleQuickReasonFormSubmit(e));
             App.DOMElements.quickReasonTableBody.addEventListener('click', e => App.handlers.handleQuickReasonTableClick(e));
             App.DOMElements.btnCancelQuickReasonEdit.addEventListener('click', () => App.handlers.resetQuickReasonForm());
@@ -663,6 +736,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-add-student-points').addEventListener('click', () => App.handlers.openStudentPointsModal());
             document.getElementById('btn-open-quick-reason-modal').addEventListener('click', () => App.handlers.openQuickReasonModal());
             document.getElementById('btn-paste-import-students').addEventListener('click', () => App.handlers.openPasteImportModal());
+
+            App.DOMElements.btnOpenAchievementModal.addEventListener('click', () => App.handlers.openAchievementModal());
+            App.DOMElements.achievementForm.addEventListener('submit', e => App.handlers.handleAchievementFormSubmit(e));
+            App.DOMElements.achievementTableBody.addEventListener('click', e => App.handlers.handleAchievementTableClick(e));
+            App.DOMElements.btnCancelAchievementEdit.addEventListener('click', () => App.handlers.resetAchievementForm());
+
 
             // 数据操作按钮（清空、导入、导出）
             document.getElementById('btn-clear-data').addEventListener('click', () => {
@@ -1140,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 App.ui.openModal(App.DOMElements.allPointsModal);
             },
-            
+
             //openAllPointsModal() { App.DOMElements.allPointsForm.reset(); App.ui.openModal(App.DOMElements.allPointsModal); },
             openTurntablePrizeModal(id = null) { App.DOMElements.turntablePrizeForm.reset(); App.DOMElements.turntablePrizeIdInput.value = id || ''; if (id) { const p = App.state.turntablePrizes.find(p => p.id === id); App.DOMElements.turntablePrizeNameInput.value = p.text; App.DOMElements.turntablePrizeModalTitle.innerText = '编辑奖品'; } else { App.DOMElements.turntablePrizeModalTitle.innerText = '新增奖品'; } App.ui.openModal(App.DOMElements.turntablePrizeModal); },
             openSpinSelectModal() { if (App.turntableInstance && App.turntableInstance.isSpinning) return; if (App.state.turntablePrizes.length === 0) { App.ui.showNotification('请先在右侧添加奖品！', 'error'); return; } App.DOMElements.spinCostDisplay.innerText = App.state.turntableCost; const s = App.DOMElements.spinStudentSelect; s.innerHTML = '<option value="">-- 选择学生 --</option>'; App.state.students.filter(st => st.points >= App.state.turntableCost).forEach(st => { const o = document.createElement('option'); o.value = st.id; o.innerText = `${st.name} (当前 ${st.points} 积分)`; s.add(o) }); App.ui.openModal(App.DOMElements.spinSelectModal); },
@@ -1303,6 +1382,67 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (result.success) {
                             App.ui.showNotification('理由已删除');
                             App.render.quickReasonTable();
+                        }
+                    });
+                }
+            },
+
+            openAchievementModal() {
+                App.handlers.resetAchievementForm(); // 重置表单
+                App.render.achievementTable(); // 渲染表格
+                App.ui.openModal(App.DOMElements.achievementModal);
+            },
+
+            resetAchievementForm() {
+                App.DOMElements.achievementForm.reset();
+                App.DOMElements.achievementIdInput.value = '';
+                App.DOMElements.btnCancelAchievementEdit.style.display = 'none';
+            },
+
+            handleAchievementFormSubmit(e) {
+                e.preventDefault();
+                const id = App.DOMElements.achievementIdInput.value;
+                const name = App.DOMElements.achievementNameInput.value;
+                const points = App.DOMElements.achievementPointsInput.value;
+
+                let result;
+                if (id) {
+                    result = App.actions.updateAchievementTier(id, name, points);
+                } else {
+                    result = App.actions.addAchievementTier(name, points);
+                }
+
+                if (result.success) {
+                    App.ui.showNotification(id ? '称号已更新' : '称号已添加');
+                    App.handlers.resetAchievementForm();
+                    App.render.achievementTable();
+                    App.render.dashboard(); // 刷新仪表盘以显示新称号
+                } else {
+                    App.ui.showNotification(result.message, 'error');
+                }
+            },
+
+            handleAchievementTableClick(e) {
+                const btn = e.target;
+                const tr = btn.closest('tr');
+                if (!tr) return;
+                const id = tr.dataset.id;
+                const tier = App.state.achievementTiers.find(t => t.id === id);
+
+                if (btn.matches('.btn-edit-achievement')) {
+                    App.DOMElements.achievementIdInput.value = tier.id;
+                    App.DOMElements.achievementNameInput.value = tier.name;
+                    App.DOMElements.achievementPointsInput.value = tier.points;
+                    App.DOMElements.btnCancelAchievementEdit.style.display = 'inline-block';
+                }
+
+                if (btn.matches('.btn-delete-achievement')) {
+                    App.ui.showConfirm(`确定要删除称号“${tier.name}”吗？`, () => {
+                        const result = App.actions.deleteAchievementTier(id);
+                        if (result.success) {
+                            App.ui.showNotification('称号已删除');
+                            App.render.achievementTable();
+                            App.render.dashboard(); // 刷新仪表盘
                         }
                     });
                 }
@@ -1577,14 +1717,16 @@ document.addEventListener('DOMContentLoaded', () => {
             studentsToRender.forEach(s => {
                 const card = document.createElement('div');
                 const achievement = App.helpers.getAchievement(s.totalEarnedPoints);
-                card.className = `student-card ${achievement ? achievement.className : ''}`;
+                card.className = `student-card ${achievement ? 'tier-level-' + achievement.level : ''}`;
+                //card.className = `student-card ${achievement ? achievement.className : ''}`;
                 if (s.justLeveledUp) {
                     card.classList.add('level-up-fx');
                     delete s.justLeveledUp;
                 }
                 card.dataset.id = s.id;
                 const g = App.state.groups.find(g => g.id === s.group)?.name || '未分组';
-                const titleHTML = achievement ? `<span class="achievement-title" data-tier="${achievement.title}">${achievement.title}</span>` : '';
+                const titleHTML = achievement ? `<span class="achievement-title" data-tier-level="${achievement.level}">${achievement.title}</span>` : '';
+                //const titleHTML = achievement ? `<span class="achievement-title" data-tier="${achievement.title}">${achievement.title}</span>` : '';
                 card.innerHTML = `
             <div class="card-header">
                 <div class="name-line">
@@ -1878,6 +2020,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.appendChild(tr);
             });
         },
+
+        "render.achievementTable": () => {
+            const tbody = App.DOMElements.achievementTableBody;
+            tbody.innerHTML = '';
+            // 按所需积分升序显示
+            const tiers = [...App.state.achievementTiers].sort((a, b) => a.points - b.points);
+
+            if (tiers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">暂无成就称号</td></tr>';
+                return;
+            }
+
+            tiers.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.dataset.id = t.id;
+                tr.innerHTML = `
+                    <td>${t.name}</td>
+                    <td>${t.points}</td>
+                    <td class="actions">
+                        <button class="btn btn-primary btn-sm btn-edit-achievement">编辑</button>
+                        <button class="btn btn-danger btn-sm btn-delete-achievement">删除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        },
+
     };
 
     // 修正 render 子函数的挂载方式
