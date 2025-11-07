@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         helpers: {
             getAchievement(totalEarnedPoints) {
                 // 1. 获取所有称号，按所需积分降序排列
-                const sortedTiers = [...App.state.achievementTiers].sort((a, b) => b.points - b.points);
+                const sortedTiers = [...App.state.achievementTiers].sort((a, b) => b.points - a.points);
 
                 // 2. 找到学生达到的最高称号
                 const achievedTier = sortedTiers.find(tier => totalEarnedPoints >= tier.points);
