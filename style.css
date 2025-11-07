@@ -843,13 +843,17 @@ form input:focus, form select:focus {
   animation: gradient-flow 3s ease infinite;
 }
 
-
+.achievement-title[data-tier-level="10"] {
+  background: linear-gradient(135deg, #de5742, #d73b2a);
+  background-size: 400% 400%;
+  animation: gradient-flow 3s ease infinite;
+}
 /* ================================== */
 /* Tier 4 (10): Legendary Rainbow Flow (终极传说级)
 /* ================================== */
 
-/* --- 10. 战神 (Legendary) --- */
-.achievement-title[data-tier-level="10"] {
+/* --- 11. 战神 (Legendary) --- */
+.achievement-title[data-tier-level="11"] {
   background: linear-gradient(
     -45deg, 
     #ff0000, /* Red */
