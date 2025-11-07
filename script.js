@@ -94,34 +94,30 @@ document.addEventListener('DOMContentLoaded', () => {
             achievementPointsInput: document.getElementById('achievement-points'),
             achievementTableBody: document.getElementById('achievement-table-body'),
             btnCancelAchievementEdit: document.getElementById('btn-cancel-achievement-edit'),
+
+            clearDataModal: document.getElementById('clear-data-modal'),
+            btnClearPointsOnly: document.getElementById('btn-clear-points-only'),
+            btnClearSettings: document.getElementById('btn-clear-settings'),
+            btnClearAll: document.getElementById('btn-clear-all'),
+
         },
 
 
-        // --- 新增：成就系统 ---
         helpers: {
             getAchievement(totalEarnedPoints) {
                 // 1. 获取所有称号，按所需积分降序排列
-                const sortedTiers = [...App.state.achievementTiers].sort((a, b) => b.points - a.points);
+                const sortedTiers = [...App.state.achievementTiers].sort((a, b) => b.points - b.points);
 
                 // 2. 找到学生达到的最高称号
                 const achievedTier = sortedTiers.find(tier => totalEarnedPoints >= tier.points);
 
                 if (!achievedTier) return null; // 未达到任何称号
 
-                // 3. 为了分配样式，我们需要知道这是“第几级”
-                //    我们按积分升序排列，找到它的索引
-                const tiersByLevel = [...App.state.achievementTiers].sort((a, b) => a.points - b.points);
-
-                // 4. 找到这个称号在“等级”中的位置（从0开始的索引）
-                const levelIndex = tiersByLevel.findIndex(t => t.id === achievedTier.id);
-
-                // 5. 返回称号名称和它的等级（1-indexed）
-                //    我们最多只支持5个等级的样式
-                const level = levelIndex + 1;
-
+                // 3. 返回称号名称和它在数据库中存储的 level
+                //    (achievedTier.level 已经在 loadData 中被保证存在)
                 return {
                     title: achievedTier.name,
-                    level: level // 例如：1, 2, 3, 4, 5, 6, 7...
+                    level: achievedTier.level
                 };
             }
         },
@@ -323,13 +319,70 @@ document.addEventListener('DOMContentLoaded', () => {
                 App.state.students.forEach(s => App.actions.changePoints(s.id, pointsDelta, reason));
                 return { success: true };
             },
-            clearAllData() {
 
-                App.state = { students: [], groups: [], rewards: [], records: [], sortState: { column: 'id', direction: 'asc' }, leaderboardType: 'realtime', turntablePrizes: [], turntableCost: 10, dashboardSortState: { column: 'points', direction: 'desc' } };
-                //App.state = { students: [], groups: [], rewards: [], records: [], sortState: { column: 'id', direction: 'asc' }, leaderboardType: 'realtime', turntablePrizes: [], turntableCost: 10 };
-                App.saveData();
-                return { success: true };
+            clearAllData() {
+                // 彻底清除 localStorage 中的数据
+                localStorage.removeItem('classPointsData');
+                // 返回一个带 reload 标志的消息
+                return { success: true, message: '所有数据已清空。页面将重新加载并恢复为演示数据。', reload: true };
             },
+
+            // --- ⬇️ 新增：选项1 (只清积分) ⬇️ ---
+            clearPointsAndRecords() {
+                App.state.students.forEach(s => {
+                    s.points = 0;
+                    s.totalEarnedPoints = 0;
+                    s.totalDeductions = 0;
+                    if (s.justLeveledUp) delete s.justLeveledUp;
+                });
+                App.state.records = [];
+                App.saveData();
+                return { success: true, message: '已清除所有积分和记录。' };
+            },
+
+            // --- ⬇️ 新增：选项2 (清积分+设置) ⬇️ ---
+            clearSettingsAndRecords() {
+                // 1. 先调用选项1，清除所有积分
+                App.actions.clearPointsAndRecords();
+
+                // 2. 清除所有设置，重置为默认值 (基于 loadData)
+                App.state.rewards = [];
+                App.state.turntablePrizes = [];
+                App.state.turntableCost = 10;
+
+                App.state.quickReasons = [
+                    { id: 'qr_1', text: '积极回答', points: 5 },
+                    { id: 'qr_2', text: '优秀作业', points: 10 },
+                    { id: 'qr_3', text: '帮助同学', points: 3 },
+                    { id: 'qr_4', text: '上课迟到', points: -1 },
+                    { id: 'qr_5', text: '未交作业', points: -5 }
+                ];
+                App.state.achievementTiers = [
+                    { id: App.actions.generateId(), name: '积分新秀', points: 50, level: 1 },
+                    { id: App.actions.generateId(), name: '积分达人', points: 100, level: 2 },
+                    { id: App.actions.generateId(), name: '积分大师', points: 200, level: 3 },
+                    { id: App.actions.generateId(), name: '积分王者', points: 500, level: 4 },
+                    { id: App.actions.generateId(), name: '精英', points: 800, level: 5 },
+                    { id: App.actions.generateId(), name: '白银', points: 1200, level: 6 },
+                    { id: App.actions.generateId(), name: '史诗', points: 1700, level: 7 },
+                    { id: App.actions.generateId(), name: '英雄', points: 2500, level: 8 },
+                    { id: App.actions.generateId(), name: '传奇', points: 4000, level: 9 },
+                    { id: App.actions.generateId(), name: '战神', points: 5000, level: 10 }
+                ];
+
+                // 3. 重置排序和视图状态
+                App.state.sortState = { column: 'id', direction: 'asc' };
+                App.state.leaderboardType = 'realtime';
+                App.state.dashboardSortState = { column: 'points', direction: 'desc' };
+                App.state.groupLeaderboardType = 'avg';
+
+                // state.students 和 state.groups 被保留
+
+                App.saveData();
+                return { success: true, message: '已清除所有设置和积分。学生/小组信息已保留。' };
+            },
+
+
             addReward(n, c) { App.state.rewards.push({ id: App.actions.generateId(), name: n, cost: parseInt(c) }); App.saveData(); return { success: true }; },
             updateReward(i, n, c) { const r = App.state.rewards.find(r => r.id === i); if (r) { r.name = n; r.cost = parseInt(c); App.saveData(); } return { success: true }; },
             deleteReward(i) { App.state.rewards = App.state.rewards.filter(r => r.id !== i); App.saveData(); return { success: true }; },
@@ -475,13 +528,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { success: true };
             },
 
-            // --- ⬇️ 新增 Actions ⬇️ ---
             addAchievementTier(name, points) {
                 if (!name || !points) return { success: false, message: '名称和所需积分不能为空' };
+
+                // 找到当前最大的 level
+                const maxLevel = App.state.achievementTiers.length > 0
+                    ? Math.max(...App.state.achievementTiers.map(t => t.level))
+                    : 0;
+
                 const newTier = {
                     id: App.actions.generateId(),
                     name: name,
-                    points: parseInt(points)
+                    points: parseInt(points),
+                    level: maxLevel + 1 // 自动成为最高等级
                 };
                 App.state.achievementTiers.push(newTier);
                 App.saveData();
@@ -501,11 +560,56 @@ document.addEventListener('DOMContentLoaded', () => {
             },
 
             deleteAchievementTier(id) {
+                const tierToDelete = App.state.achievementTiers.find(t => t.id === id);
+                if (!tierToDelete) return { success: false, message: '未找到' };
+
+                const deletedLevel = tierToDelete.level;
+
+                // 1. 过滤掉要删除的
                 App.state.achievementTiers = App.state.achievementTiers.filter(t => t.id !== id);
+
+                // 2. 将所有更高级别的 level 减 1，填补空缺
+                App.state.achievementTiers
+                    .filter(t => t.level > deletedLevel)
+                    .forEach(t => {
+                        t.level -= 1;
+                    });
+
                 App.saveData();
                 return { success: true };
             },
-            // --- ⬆️ 新增结束 ⬆️ ---
+
+            moveAchievement(id, direction) {
+                // 必须先按 level 排序才能正确找到邻居
+                const tiers = App.state.achievementTiers.sort((a, b) => a.level - b.level);
+                const tierIndex = tiers.findIndex(t => t.id === id);
+
+                if (tierIndex === -1) return { success: false };
+
+                if (direction === 'up' && tierIndex > 0) {
+                    // 不是第一个，可以上移
+                    const tierToMove = tiers[tierIndex];
+                    const tierToSwap = tiers[tierIndex - 1]; // 它上面的邻居
+
+                    // 交换 level
+                    tierToMove.level -= 1;
+                    tierToSwap.level += 1;
+
+                } else if (direction === 'down' && tierIndex < tiers.length - 1) {
+                    // 不是最后一个，可以下移
+                    const tierToMove = tiers[tierIndex];
+                    const tierToSwap = tiers[tierIndex + 1]; // 它下面的邻居
+
+                    // 交换 level
+                    tierToMove.level += 1;
+                    tierToSwap.level -= 1;
+                } else {
+                    return { success: false }; // 已经在顶部或底部
+                }
+
+                App.saveData();
+                return { success: true };
+            },
         },
 
         // ... (render, saveData, loadData, import/export 函数保持不变)
@@ -522,23 +626,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 // --- ⬇️ 新增 ⬇️ ---
                 achievementTiers: [],
                 // --- ⬆️ 新增 ⬆️ ---
-            }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; if (st.totalDeductions === undefined) st.totalDeductions = 0; /* <--- 新增此行 */ }); } App.state = { ...s, ...l }; } else {
+            }; if (d) {
+                const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; if (st.totalDeductions === undefined) st.totalDeductions = 0; }); } App.state = { ...s, ...l };
+
+                // --- ⬇️ 新增：自动为旧数据打上 level 补丁 ⬇️ ---
+                if (App.state.achievementTiers && App.state.achievementTiers.length > 0) {
+                    const needsPatch = App.state.achievementTiers.some(t => t.level === undefined);
+                    if (needsPatch) {
+                        console.log("正在为成就数据添加 'level' 补丁...");
+                        // 按照旧的“按积分排序”逻辑来分配初始等级
+                        App.state.achievementTiers.sort((a, b) => a.points - b.points);
+                        App.state.achievementTiers.forEach((tier, index) => {
+                            tier.level = index + 1;
+                        });
+                        App.saveData(); // 保存补丁
+                    }
+                }
+                // --- ⬆️ 补丁结束 ⬆️ ---
+
+            } else {
                 App.state = s; let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100, totalDeductions: 0 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80, totalDeductions: 0 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }];
-                // --- ⬇️ 新增：设置默认称号 ⬇️ ---
+
+                // --- ⬇️ 修正：为默认称号添加 'level' 属性 ⬇️ ---
                 App.state.achievementTiers = [
-                    { id: App.actions.generateId(), name: '积分新秀', points: 50 },
-                    { id: App.actions.generateId(), name: '积分达人', points: 100 },
-                    { id: App.actions.generateId(), name: '积分大师', points: 200 },
-                    { id: App.actions.generateId(), name: '积分王者', points: 500 },
-                    { id: App.actions.generateId(), name: '积分战神', points: 1000 }
+                    { id: App.actions.generateId(), name: '积分新秀', points: 50, level: 1 },
+                    { id: App.actions.generateId(), name: '积分达人', points: 100, level: 2 },
+                    { id: App.actions.generateId(), name: '积分大师', points: 200, level: 3 },
+                    { id: App.actions.generateId(), name: '积分王者', points: 500, level: 4 },
+                    { id: App.actions.generateId(), name: '精英', points: 800, level: 5 },
+                    { id: App.actions.generateId(), name: '白银', points: 1200, level: 6 },
+                    { id: App.actions.generateId(), name: '史诗', points: 1700, level: 7 },
+                    { id: App.actions.generateId(), name: '英雄', points: 2500, level: 8 },
+                    { id: App.actions.generateId(), name: '传奇', points: 4000, level: 9 },
+                    { id: App.actions.generateId(), name: '战神', points: 5000, level: 10 }
                 ];
-                // --- ⬆️ 新增 ⬆️ ---
+                // --- ⬆️ 修正结束 ⬆️ ---
                 App.saveData();
             }
         },
-        //loadData() { const d = localStorage.getItem('classPointsData'); const s = { students: [], groups: [], rewards: [], records: [], sortState: { column: 'id', direction: 'asc' }, leaderboardType: 'realtime', turntablePrizes: [], turntableCost: 10 }; if (d) { const l = JSON.parse(d); if (l.students) { l.students.forEach(st => { if (st.totalEarnedPoints === undefined) st.totalEarnedPoints = st.points > 0 ? st.points : 0; }); } App.state = { ...s, ...l }; } else { let sG1 = App.actions.generateId(); let sG2 = App.actions.generateId(); App.state.groups = [{ id: sG1, name: '第一小组' }, { id: sG2, name: '第二小组' }]; App.state.students = [{ id: 'S01', name: '张三', group: sG1, points: 100, totalEarnedPoints: 100 }, { id: 'S02', name: '李四', group: sG2, points: 80, totalEarnedPoints: 80 }]; App.state.rewards = [{ id: App.actions.generateId(), name: '免作业一次', cost: 50 }, { id: App.actions.generateId(), name: '小零食', cost: 20 }]; App.saveData(); } },
-        //exportData: () => { const d = JSON.stringify(App.state, null, 2); const b = new Blob([d], { type: 'application/json' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `class_data_${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(u) },
-
 
         // 将旧的 exportData 函数替换为这两个
         exportDataJSON: () => {
@@ -743,15 +868,6 @@ document.addEventListener('DOMContentLoaded', () => {
             App.DOMElements.btnCancelAchievementEdit.addEventListener('click', () => App.handlers.resetAchievementForm());
 
 
-            // 数据操作按钮（清空、导入、导出）
-            document.getElementById('btn-clear-data').addEventListener('click', () => {
-                App.ui.showConfirm('警告：此操作将清空所有数据且不可撤销！确认吗？', () => {
-                    App.actions.clearAllData();
-                    App.render();
-                    App.ui.showNotification('所有数据已清空。');
-                });
-            });
-
             // --- 以下是修正后的导出/导入逻辑 ---
 
             // 1. “导出数据”按钮只负责打开选择模态框
@@ -771,10 +887,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 App.ui.closeModal(App.DOMElements.exportChoiceModal);
             });
 
-            // 4. “导入数据”按钮负责触发文件选择框
+
             document.getElementById('btn-import-data').addEventListener('click', () => App.DOMElements.importFileInput.click());
             App.DOMElements.importFileInput.addEventListener('change', e => App.importData(e));
 
+            // 1. “清除数据”按钮现在打开新模态框
+            document.getElementById('btn-clear-data').addEventListener('click', () => {
+                App.ui.openModal(App.DOMElements.clearDataModal);
+            });
+
+            // 2. 监听新模态框的三个按钮
+            App.DOMElements.btnClearPointsOnly.addEventListener('click', () => {
+                App.ui.closeModal(App.DOMElements.clearDataModal);
+                App.ui.showConfirm('确认【仅清除所有积分和记录】吗？学生和设置将保留。', () => {
+                    const result = App.actions.clearPointsAndRecords();
+                    App.render();
+                    App.ui.showNotification(result.message);
+                });
+            });
+
+            App.DOMElements.btnClearSettings.addEventListener('click', () => {
+                App.ui.closeModal(App.DOMElements.clearDataModal);
+                App.ui.showConfirm('确认【清除所有设置和积分】吗？学生和小组名单将保留。', () => {
+                    const result = App.actions.clearSettingsAndRecords();
+                    App.render();
+                    App.ui.showNotification(result.message);
+                });
+            });
+
+            App.DOMElements.btnClearAll.addEventListener('click', () => {
+                App.ui.closeModal(App.DOMElements.clearDataModal);
+                App.ui.showConfirm('【最终警告】确认【清除所有数据】吗？此操作不可撤销！', () => {
+                    const result = App.actions.clearAllData();
+                    App.ui.showNotification(result.message, 'success');
+                    // 稍作延迟后刷新页面
+                    if (result.reload) {
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                });
+            });
             // --- 其他监听器 ---
             App.DOMElements.searchInput.addEventListener('input', e => App.render.dashboard(e.target.value));
             App.DOMElements.dashboardSortControls.addEventListener('click', e => App.handlers.handleDashboardSortClick(e));
@@ -1423,13 +1574,16 @@ document.addEventListener('DOMContentLoaded', () => {
             },
 
             handleAchievementTableClick(e) {
-                const btn = e.target;
+                const btn = e.target.closest('button'); // 关键：确保点到图标上也算点到按钮
+                if (!btn) return;
+
                 const tr = btn.closest('tr');
                 if (!tr) return;
                 const id = tr.dataset.id;
-                const tier = App.state.achievementTiers.find(t => t.id === id);
 
                 if (btn.matches('.btn-edit-achievement')) {
+                    const tier = App.state.achievementTiers.find(t => t.id === id);
+                    if (!tier) return;
                     App.DOMElements.achievementIdInput.value = tier.id;
                     App.DOMElements.achievementNameInput.value = tier.name;
                     App.DOMElements.achievementPointsInput.value = tier.points;
@@ -1437,6 +1591,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (btn.matches('.btn-delete-achievement')) {
+                    const tier = App.state.achievementTiers.find(t => t.id === id);
+                    if (!tier) return;
                     App.ui.showConfirm(`确定要删除称号“${tier.name}”吗？`, () => {
                         const result = App.actions.deleteAchievementTier(id);
                         if (result.success) {
@@ -1446,6 +1602,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 }
+
+                // --- ⬇️ 新增：处理移动按钮 ⬇️ ---
+                if (btn.matches('.btn-move-up') || btn.matches('.btn-move-down')) {
+                    const direction = btn.matches('.btn-move-up') ? 'up' : 'down';
+                    const result = App.actions.moveAchievement(id, direction);
+
+                    if (result.success) {
+                        // 重新渲染表格以显示新顺序
+                        App.render.achievementTable();
+                        // 刷新仪表盘，因为 level 对应的 CSS 可能变了
+                        App.render.dashboard();
+                    }
+                }
+                // --- ⬆️ 新增结束 ⬆️ ---
             },
 
 
@@ -2024,19 +2194,33 @@ document.addEventListener('DOMContentLoaded', () => {
         "render.achievementTable": () => {
             const tbody = App.DOMElements.achievementTableBody;
             tbody.innerHTML = '';
-            // 按所需积分升序显示
-            const tiers = [...App.state.achievementTiers].sort((a, b) => a.points - b.points);
+
+            // 核心：现在按照 level 属性排序，而不是积分
+            const tiers = [...App.state.achievementTiers].sort((a, b) => a.level - b.level);
+            const totalTiers = tiers.length;
 
             if (tiers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">暂无成就称号</td></tr>';
+                // 修正 colspan 以匹配新表头
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">暂无成就称号</td></tr>';
                 return;
             }
 
-            tiers.forEach(t => {
+            tiers.forEach((t, index) => {
                 const tr = document.createElement('tr');
                 tr.dataset.id = t.id;
+
+                // 检查按钮是否应该被禁用
+                const upDisabled = (index === 0) ? 'disabled' : '';
+                const downDisabled = (index === totalTiers - 1) ? 'disabled' : '';
+
+                // “顺序”列的按钮
+                const orderButtons = `
+                    <button class="btn btn-sm btn-move-up" ${upDisabled} title="上移">🔼</button>
+                    <button class="btn btn-sm btn-move-down" ${downDisabled} title="下移">🔽</button>
+                `;
+
                 tr.innerHTML = `
-                    <td>${t.name}</td>
+                    <td class="actions-condensed">${orderButtons}</td> <td>${t.name}</td>
                     <td>${t.points}</td>
                     <td class="actions">
                         <button class="btn btn-primary btn-sm btn-edit-achievement">编辑</button>
@@ -2046,7 +2230,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.appendChild(tr);
             });
         },
-
     };
 
     // 修正 render 子函数的挂载方式

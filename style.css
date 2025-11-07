@@ -1087,3 +1087,90 @@ form input:focus, form select:focus {
   padding-top: 10px;
   border-top: 1px solid var(--border-color);
 }
+
+/* --- 1. 让成就模态框里的滚动条生效 --- */
+#achievement-modal .record-table-container {
+  max-height: 45vh; /* 限制最大高度为屏幕的45% */
+  margin-top: 20px;
+  border: 1px solid var(--border-color); /* 添加一个边框 */
+  border-radius: 8px;
+}
+#achievement-modal .record-table-container .styled-table {
+  border: none; /* 移除表格自己的边框 */
+  box-shadow: none;
+}
+
+/* --- 2. "顺序" (移动) 按钮的样式 --- */
+.styled-table td.actions-condensed {
+    padding: 10px;
+    width: 90px; /* 固定宽度，防止按钮跳动 */
+}
+.styled-table td.actions-condensed .btn {
+    padding: 5px 8px;
+    font-size: 1.2em; /* 放大图标 */
+    line-height: 1;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--sub-font-color);
+}
+.styled-table td.actions-condensed .btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+}
+.styled-table td.actions-condensed .btn:not(:disabled):hover {
+    background-color: #eef2f7;
+    transform: scale(1.1);
+    color: var(--primary-color);
+}
+
+/* --- 修复：z-index 堆叠顺序 --- */
+#confirm-modal {
+
+  z-index: 1010;
+}
+
+
+/* --- 清除数据选择模态框 --- */
+.clear-data-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+.clear-data-choices .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 15px;
+  font-size: 0.95em;
+  flex-direction: column; /* 让主标题和副标题垂直排列 */
+  line-height: 1.5;
+  text-align: center;
+}
+.clear-data-choices .btn strong {
+  font-size: 1.1em;
+}
+.clear-data-choices p {
+  margin-bottom: 5px;
+  color: var(--sub-font-color);
+  text-align: center;
+}
+
+/* 新增按钮样式 */
+.btn-warning {
+  background-color: var(--gold);
+  color: #333; /* 金色背景需要深色文字 */
+  border: 1px solid #e6b800;
+}
+.btn-warning:hover {
+  background-color: #e6b800;
+}
+/* 危险-次要 按钮 */
+.btn-danger-secondary {
+  background-color: #fff;
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+.btn-danger-secondary:hover {
+  background-color: #fff5f5;
+}
